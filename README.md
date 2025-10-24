@@ -4,7 +4,9 @@
 
 <a href="https://github.com/brasilcep/brasilcep-webservice/actions/workflows/cicd.yml"><img src="https://github.com/brasilcep/brasilcep-webservice/actions/workflows/cicd.yml/badge.svg" /></a>
 
-API REST para consulta de CEPs brasileiros, baseada na base oficial dos Correios (DNE). Projeto open source, rápido, eficiente e fácil de usar.
+API REST para consulta de CEPs brasileiros, baseada na base oficial dos Correios (DNE) com propósito de hospedar no seu servidor sem necessidade de acesso a terceiros.
+
+Projeto open source, rápido, eficiente e fácil de usar.
 
 ## Sumário
 - [Sumário](#sumário)
@@ -12,6 +14,8 @@ API REST para consulta de CEPs brasileiros, baseada na base oficial dos Correios
 - [Build local](#build-local)
 - [Configurações via ENV](#configurações-via-env)
 - [Importação da base DNE](#importação-da-base-dne)
+- [Modo seed: importação da base DNE](#modo-seed-importação-da-base-dne)
+  - [Estrutura de pastas esperada para a base DNE](#estrutura-de-pastas-esperada-para-a-base-dne)
 - [Endpoints da API](#endpoints-da-api)
   - [`GET /cep/:cep`](#get-cepcep)
   - [`GET /healthcheck`](#get-healthcheck)
@@ -21,8 +25,6 @@ API REST para consulta de CEPs brasileiros, baseada na base oficial dos Correios
 - [Configurações da API](#configurações-da-api)
 - [Licença](#licença)
 - [Contribua](#contribua)
-- [Modo populate: importação da base DNE](#modo-populate-importação-da-base-dne)
-  - [Estrutura de pastas esperada para a base DNE](#estrutura-de-pastas-esperada-para-a-base-dne)
 
 ---
 
@@ -57,27 +59,30 @@ O binário será gerado em `./bin/brasilcep-webservice`.
 
 ## Configurações via ENV
 
-Todas as configurações podem ser definidas via variáveis de ambiente. Use o formato abaixo:
+Todas as configurações podem ser definidas via variáveis de ambiente:
 
-| ENV_VAR                              | Valor padrão         | Descrição                                                                 |
-|--------------------------------------|----------------------|---------------------------------------------------------------------------|
-| MODE                                 | listen               | Modo de operação ("listen" para API HTTP)                                 |
-| API_PORT                             | 8080                 | Porta HTTP para escutar                                                   |
-| API_PROMETHEUS_ENABLE                | true                 | Habilita métricas Prometheus                                              |
-| API_ENABLE_GZIP                      | true                 | Habilita compressão Gzip                                                  |
-| API_GZIP_COMPRESSION_LEVEL           | 5                    | Nível de compressão Gzip (1-9)                                            |
-| API_RATE_LIMIT_ENABLE                | true                 | Habilita rate limiting                                                    |
-| API_RATE_LIMIT_MAX_ALLOWED_REQUESTS_PER_WINDOW | 100         | Máximo de requisições por janela de tempo                                 |
-| API_RATE_LIMIT_REQUESTS_BURST        | 20                   | Burst de requisições permitidas                                           |
-| API_RATE_LIMIT_EXPIRE_MINUTES        | 15                   | Janela de tempo do rate limit (minutos)                                   |
-| API_CORS_ALLOW_ORIGINS               | *                    | Origens permitidas no CORS (array, ex: ["*"])                             |
-| API_CORS_ALLOW_METHODS               | GET,HEAD,PUT,PATCH,POST,DELETE | Métodos permitidos no CORS (array)                              |
-| API_CORS_ALLOW_HEADERS               | Origin,Content-Type,Accept,Authorization | Headers permitidos no CORS (array)                      |
-| DB_PATH                              | ./data               | Caminho para os arquivos do banco BadgerDB                                |
-| DB_RAW_PATH                          | ./dne                | Caminho para os arquivos originais do DNE                                 |
-| LOG_FORMAT                           | json                 | Formato do log ("json" ou "text")                                         |
-| LOG_LEVEL                            | info                 | Nível de log ("debug", "info", "warn", "error")                         |
+- **MODE**: Modo de operação ("listen" para API HTTP ou "seed" para popular dados do DNE na base). Padrão: `listen`
+- **API_PORT**: Porta HTTP para escutar. Padrão: `8080`
+  
+- **API_PROMETHEUS_ENABLE**: Habilita métricas Prometheus. Padrão: `true`
+  
+- **API_ENABLE_GZIP**: Habilita compressão Gzip. Padrão: `true`
+- **API_GZIP_COMPRESSION_LEVEL**: Nível de compressão Gzip (1-9). Padrão: `5`
+  
+- **API_RATE_LIMIT_ENABLE**: Habilita rate limiting. Padrão: `true`
+- **API_RATE_LIMIT_MAX_ALLOWED_REQUESTS_PER_WINDOW**: Máximo de requisições por janela de tempo. Padrão: `100`
+- **API_RATE_LIMIT_REQUESTS_BURST**: Burst de requisições permitidas. Padrão: `20`
+- **API_RATE_LIMIT_EXPIRE_MINUTES**: Janela de tempo do rate limit (minutos). Padrão: `15`
+  
+- **API_CORS_ALLOW_ORIGINS**: Origens permitidas no CORS (array, ex: ["*"]). Padrão: `*`
+- **API_CORS_ALLOW_METHODS**: Métodos permitidos no CORS (array). Padrão: `GET,HEAD,PUT,PATCH,POST,DELETE`
+- **API_CORS_ALLOW_HEADERS**: Headers permitidos no CORS (array). Padrão: `Origin,Content-Type,Accept,Authorization`
+  
+- **DB_PATH**: Caminho para os arquivos do banco BadgerDB. Padrão: `./data`
+- **DB_RAW_PATH**: Caminho para os arquivos originais do DNE. Padrão: `./dne`
 
+- **LOG_FORMAT**: Formato do log ("json" ou "text"). Padrão: `json`
+- **LOG_LEVEL**: Nível de log ("debug", "info", "warn", "error"). Padrão: `info`
 Exemplo de uso:
 ```sh
 export API_PORT=8081
@@ -94,10 +99,7 @@ Para importar a base oficial dos Correios (DNE):
      zipImporter := zipcodes.NewZipCodeImporter(logger)
      zipImporter.PopulateZipcodes("./dne")
      ```
-     Ou execute o modo cliente da aplicação executando o modo populate
-     ```bash
-     MODE=populate go run main.go 
-     ```
+     Ou execute o modo seed
 
 Arquivos necessários:
 - LOG_LOCALIDADE.TXT
@@ -106,6 +108,71 @@ Arquivos necessários:
 - LOG_GRANDE_USUARIO.TXT
 - LOG_UNID_OPER.TXT
 - LOG_CPC.TXT
+
+## Modo seed: importação da base DNE
+
+O modo `seed` serve para importar a base oficial dos Correios (DNE) para o banco local BadgerDB. Basta definir a variável de ambiente `MODE=seed` e executar o projeto:
+
+```sh
+export MODE=seed
+go run main.go
+```
+Ou via Makefile:
+```sh
+MODE=seed make run
+```
+
+O caminho da base DNE pode ser configurado via `DB_RAW_PATH` (por padrão, `./dne`).
+
+O importador lê todos os arquivos TXT necessários e popula o banco local. Após o término, o modo pode ser alterado para `listen` para servir a API normalmente.
+
+### Estrutura de pastas esperada para a base DNE
+
+Coloque todos os arquivos TXT do DNE na pasta definida por `DB_RAW_PATH` (por padrão, `./dne`).
+
+Exemplo:
+```
+./
+├── main.go
+├── dne/
+│   ├── LOG_LOCALIDADE.TXT
+│   ├── LOG_BAIRRO.TXT
+│   ├── LOG_LOGRADOURO_AC.TXT
+│   ├── LOG_LOGRADOURO_AL.TXT
+│   ├── LOG_LOGRADOURO_AM.TXT
+│   ├── LOG_LOGRADOURO_AP.TXT
+│   ├── LOG_LOGRADOURO_BA.TXT
+│   ├── LOG_LOGRADOURO_CE.TXT
+│   ├── LOG_LOGRADOURO_DF.TXT
+│   ├── LOG_LOGRADOURO_ES.TXT
+│   ├── LOG_LOGRADOURO_GO.TXT
+│   ├── LOG_LOGRADOURO_MA.TXT
+│   ├── LOG_LOGRADOURO_MG.TXT
+│   ├── LOG_LOGRADOURO_MS.TXT
+│   ├── LOG_LOGRADOURO_MT.TXT
+│   ├── LOG_LOGRADOURO_PA.TXT
+│   ├── LOG_LOGRADOURO_PB.TXT
+│   ├── LOG_LOGRADOURO_PE.TXT
+│   ├── LOG_LOGRADOURO_PI.TXT
+│   ├── LOG_LOGRADOURO_PR.TXT
+│   ├── LOG_LOGRADOURO_RJ.TXT
+│   ├── LOG_LOGRADOURO_RN.TXT
+│   ├── LOG_LOGRADOURO_RO.TXT
+│   ├── LOG_LOGRADOURO_RR.TXT
+│   ├── LOG_LOGRADOURO_RS.TXT
+│   ├── LOG_LOGRADOURO_SC.TXT
+│   ├── LOG_LOGRADOURO_SE.TXT
+│   ├── LOG_LOGRADOURO_SP.TXT
+│   ├── LOG_LOGRADOURO_TO.TXT
+│   ├── LOG_GRANDE_USUARIO.TXT
+│   ├── LOG_UNID_OPER.TXT
+│   ├── LOG_CPC.TXT
+│   └── LOG_LOCALIDADE.TXT
+```
+
+**Atenção:** Todos os arquivos devem estar codificados em ISO-8859-1, conforme padrão dos Correios.
+
+Após importar, rode o projeto normalmente em modo `listen` para servir a API.
 
 ## Endpoints da API
 
@@ -204,68 +271,3 @@ MIT
 
 ## Contribua
 Pull requests são bem-vindos! Abra issues para sugestões ou problemas.
-
-## Modo populate: importação da base DNE
-
-O modo `populate` serve para importar a base oficial dos Correios (DNE) para o banco local BadgerDB. Basta definir a variável de ambiente `MODE=populate` e executar o projeto:
-
-```sh
-export MODE=populate
-go run main.go
-```
-Ou via Makefile:
-```sh
-MODE=populate make run
-```
-
-O caminho da base DNE pode ser configurado via `DB_RAW_PATH` (por padrão, `./dne`).
-
-O importador lê todos os arquivos TXT necessários e popula o banco local. Após o término, o modo pode ser alterado para `listen` para servir a API normalmente.
-
-### Estrutura de pastas esperada para a base DNE
-
-Coloque todos os arquivos TXT do DNE na pasta definida por `DB_RAW_PATH` (por padrão, `./dne`).
-
-Exemplo:
-```
-./
-├── main.go
-├── dne/
-│   ├── LOG_LOCALIDADE.TXT
-│   ├── LOG_BAIRRO.TXT
-│   ├── LOG_LOGRADOURO_AC.TXT
-│   ├── LOG_LOGRADOURO_AL.TXT
-│   ├── LOG_LOGRADOURO_AM.TXT
-│   ├── LOG_LOGRADOURO_AP.TXT
-│   ├── LOG_LOGRADOURO_BA.TXT
-│   ├── LOG_LOGRADOURO_CE.TXT
-│   ├── LOG_LOGRADOURO_DF.TXT
-│   ├── LOG_LOGRADOURO_ES.TXT
-│   ├── LOG_LOGRADOURO_GO.TXT
-│   ├── LOG_LOGRADOURO_MA.TXT
-│   ├── LOG_LOGRADOURO_MG.TXT
-│   ├── LOG_LOGRADOURO_MS.TXT
-│   ├── LOG_LOGRADOURO_MT.TXT
-│   ├── LOG_LOGRADOURO_PA.TXT
-│   ├── LOG_LOGRADOURO_PB.TXT
-│   ├── LOG_LOGRADOURO_PE.TXT
-│   ├── LOG_LOGRADOURO_PI.TXT
-│   ├── LOG_LOGRADOURO_PR.TXT
-│   ├── LOG_LOGRADOURO_RJ.TXT
-│   ├── LOG_LOGRADOURO_RN.TXT
-│   ├── LOG_LOGRADOURO_RO.TXT
-│   ├── LOG_LOGRADOURO_RR.TXT
-│   ├── LOG_LOGRADOURO_RS.TXT
-│   ├── LOG_LOGRADOURO_SC.TXT
-│   ├── LOG_LOGRADOURO_SE.TXT
-│   ├── LOG_LOGRADOURO_SP.TXT
-│   ├── LOG_LOGRADOURO_TO.TXT
-│   ├── LOG_GRANDE_USUARIO.TXT
-│   ├── LOG_UNID_OPER.TXT
-│   ├── LOG_CPC.TXT
-│   └── LOG_LOCALIDADE.TXT
-```
-
-**Atenção:** Todos os arquivos devem estar codificados em ISO-8859-1, conforme padrão dos Correios.
-
-Após importar, rode o projeto normalmente em modo `listen` para servir a API.
