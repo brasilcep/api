@@ -16,3 +16,7 @@ REPO := github.com/brasilcep/api
 build:
 	@echo "Building version $(VERSION) (commit: $(COMMIT))"
 	go build -ldflags "-X '$(REPO).api.Version=$(VERSION)' -X '$(REPO).api.Commit=$(COMMIT)' -X '$(REPO).Repo=$(REPO)' -X '$(REPO).Compiler=$(GO_VERSION)'" -o wserver main.go
+test:
+	go test -v ./......
+lint:
+	golangci-lint run --timeout 5m

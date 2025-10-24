@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - main
+    tags:
+      - v[0-9].[0-9].[0-9]+
+      - v[0-9].[0-9]+.[0-9]+-beta
   pull_request:
     branches:
       - main
@@ -14,8 +17,10 @@ jobs:
     steps:
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
+
       - name: Checkout code
         uses: actions/checkout@v3
 
@@ -47,9 +52,11 @@ jobs:
 
       - name: Build application
         run: go build -v ./...
-  push-docker-latest:
+
+  release:
     runs-on: ubuntu-latest
-    needs: test
+    needs: [test]
+    if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/')
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -63,10 +70,35 @@ jobs:
         run: go mod download
 
       - name: Build application
-        run: go build -v ./...
+        run: make build
+
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
         with:
           username: ${{ secrets.DOCKER_HUB_USERNAME }}
-          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}\
-      - name: Seed DNE  
+          password: ${{ secrets.DOCKER_HUB_ACCESS_TOKEN }}
+
+      - name: Seed DNE (Correios Data) 
+        run: |
+          chmod +x ./scripts/dne_download.sh
+          ./scripts/dne_download.sh ${{ secrets.DNE_USERNAME }} ${{ secrets.DNE_PASSWORD }}
+          echo "Seeding DNE data..."
+          MODE=seed ./wservice
+
+      - name: Get version tag
+        id: get_tag
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+            else
+            echo "tag=${GITHUB_SHA:0:7}-unstable" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: |
+            brasilcep/api:latest
+            brasilcep/api:${{ steps.get_tag.outputs.tag }}
