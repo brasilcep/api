@@ -84,6 +84,7 @@ jobs:
           ./scripts/dne_download.sh ${{ secrets.DNE_USERNAME }} ${{ secrets.DNE_PASSWORD }}
           echo "Seeding DNE data..."
           MODE=seed ./wservice
+          rm -rf ./dne/
 
       - name: Get version tag
         id: get_tag
