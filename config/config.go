@@ -36,15 +36,7 @@ func NewConfig() *viper.Viper {
 	conf.SetDefault("log.format", "json")
 	conf.SetDefault("log.level", "info")
 
-	// Config file
-	conf.SetConfigName("config") // nome do arquivo sem extensão
-	conf.SetConfigType("yaml")   // ou json, toml, etc.
-	conf.AddConfigPath(".")      // onde procurar o arquivo
-
-	if err := conf.ReadInConfig(); err != nil {
-		// Se não achar o arquivo, apenas logar (não falhar)
-		// fmt.Println("No config file found, using defaults and envs")
-	}
+	conf.BindEnv()
 
 	return conf
 }
