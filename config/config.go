@@ -8,6 +8,7 @@ import (
 
 func NewConfig() *viper.Viper {
 	conf := viper.New()
+	conf.AutomaticEnv()
 
 	conf.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
@@ -35,7 +36,15 @@ func NewConfig() *viper.Viper {
 	conf.SetDefault("log.format", "json")
 	conf.SetDefault("log.level", "info")
 
-	conf.AutomaticEnv()
+	// Config file
+	conf.SetConfigName("config") // nome do arquivo sem extensão
+	conf.SetConfigType("yaml")   // ou json, toml, etc.
+	conf.AddConfigPath(".")      // onde procurar o arquivo
+
+	if err := conf.ReadInConfig(); err != nil {
+		// Se não achar o arquivo, apenas logar (não falhar)
+		// fmt.Println("No config file found, using defaults and envs")
+	}
 
 	return conf
 }
