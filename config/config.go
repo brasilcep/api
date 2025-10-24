@@ -12,7 +12,7 @@ func NewConfig() *viper.Viper {
 
 	conf.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
-	conf.SetDefault("mode", "listen")
+	conf.SetDefault("mode", "listen") //listen, seed
 
 	conf.SetDefault("api.port", 8080)
 

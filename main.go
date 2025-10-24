@@ -23,7 +23,7 @@ func main() {
 	case "listen":
 		api := api.NewAPI(config, logger)
 		api.Listen()
-	case "populate":
+	case "seed":
 		dnePath := config.GetString("db.raw.path")
 		zipcodesImporter := zipcodes.NewZipCodeImporter(logger)
 		zipcodesImporter.PopulateZipcodes(dnePath)
