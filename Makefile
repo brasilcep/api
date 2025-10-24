@@ -9,9 +9,10 @@ VERSION := $(shell \
 		git describe --tags --always --dirty; \
 	fi \
 )
+GO_VERSION := $(shell go version | awk '{print $$3}')
 
 REPO := github.com/brasilcep/brasilcep-webservice
 
 build:
 	@echo "Building version $(VERSION) (commit: $(COMMIT))"
-	go build -ldflags "-X '$(REPO).api.Version=$(VERSION)' -X '$(REPO).api.Commit=$(COMMIT)' -X '$(REPO).Repo=$(REPO)'"
+	go build -ldflags "-X '$(REPO).api.Version=$(VERSION)' -X '$(REPO).api.Commit=$(COMMIT)' -X '$(REPO).Repo=$(REPO)' -X '$(REPO).Compiler=$(GO_VERSION)'"

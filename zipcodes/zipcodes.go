@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -13,7 +12,9 @@ import (
 	"time"
 
 	"github.com/brasilcep/brasilcep-webservice/database"
+	"github.com/brasilcep/brasilcep-webservice/logger"
 	badger "github.com/dgraph-io/badger/v4"
+	"go.uber.org/zap"
 	"golang.org/x/text/encoding/charmap"
 	"golang.org/x/text/transform"
 )
@@ -98,106 +99,91 @@ var (
 	seenCEPs   = make(map[string]bool)
 )
 
+type ZipCodeImporter struct {
+	db     *badger.DB
+	logger *logger.Logger
+}
+
 var nonDigit = regexp.MustCompile(`\D`)
 
-func normalizeCEP(raw string) string {
-	cep := nonDigit.ReplaceAllString(raw, "")
-	if len(cep) != 8 {
-		return ""
+func NewZipCodeImporter(logger *logger.Logger) *ZipCodeImporter {
+	return &ZipCodeImporter{
+		db:     database.GetDB(),
+		logger: logger,
 	}
-	return cep
 }
 
-func writeCEPIfNew(wb *badger.WriteBatch, cep string, data CEPCompleto) error {
-	if cep == "" {
-		return fmt.Errorf("empty cep")
-	}
-	if seenCEPs[cep] {
-		return nil
-	}
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return err
-	}
-	key := []byte("cep:" + cep)
-	if err := wb.Set(key, jsonData); err != nil {
-		return err
-	}
-	seenCEPs[cep] = true
-	return nil
-}
-
-func PopulateZipcodes(dnePath string) {
+func (i *ZipCodeImporter) PopulateZipcodes(dnePath string) {
 	if dnePath == "" {
-		log.Fatal("DNE database path is required")
+		i.logger.Error("DNE path is empty")
 	}
 
-	log.Println("Starting DNE import...")
+	i.logger.Info("Starting DNE import...")
 	start := time.Now()
 
 	var err error
 	db = database.GetDB()
 	if db == nil {
-		log.Fatal("BadgerDB not initialized (database.GetDB() returned nil)")
+		i.logger.Error("BadgerDB not initialized (database.GetDB() returned nil)")
 	}
 
-	log.Println("Loading localities...")
-	if err := loadLocalities(filepath.Join(dnePath, "LOG_LOCALIDADE.TXT")); err != nil {
-		log.Printf("Warning: %v", err)
+	i.logger.Info("Loading localities...")
+	if err := i.loadLocalities(filepath.Join(dnePath, "LOG_LOCALIDADE.TXT")); err != nil {
+		i.logger.Warn("Warning loading localities", zap.Error(err))
 	}
-	log.Printf("Localities loaded: %d", len(localities))
+	i.logger.Info("Localities loaded", zap.Int("count", len(localities)))
 
-	log.Println("Loading districts...")
-	if err := loadDistricts(filepath.Join(dnePath, "LOG_BAIRRO.TXT")); err != nil {
-		log.Printf("Warning: %v", err)
+	i.logger.Info("Loading districts...")
+	if err := i.loadDistricts(filepath.Join(dnePath, "LOG_BAIRRO.TXT")); err != nil {
+		i.logger.Warn("Warning loading districts", zap.Error(err))
 	}
-	log.Printf("Districts loaded: %d", len(districts))
+	i.logger.Info("Districts loaded", zap.Int("count", len(districts)))
 
-	log.Println("Importing locality CEPs (general CEP)...")
-	if err := importLocalityCEPs(); err != nil {
-		log.Printf("Warning while importing localities: %v", err)
+	i.logger.Info("Importing locality CEPs (general CEP)...")
+	if err := i.importLocalityCEPs(); err != nil {
+		i.logger.Warn("Warning while importing localities", zap.Error(err))
 	}
 
-	log.Println("Importing streets by state...")
+	i.logger.Info("Importing streets by state...")
 	totalStreets := 0
 	for _, uf := range []string{"AC", "AL", "AP", "AM", "BA", "CE", "DF", "ES", "GO", "MA", "MT", "MS", "MG", "PA", "PB", "PR", "PE", "PI", "RJ", "RN", "RS", "RO", "RR", "SC", "SP", "SE", "TO"} {
 		filePath := filepath.Join(dnePath, "LOG_LOGRADOURO_"+uf+".TXT")
-		ufCount, err := importStreets(filePath)
+		ufCount, err := i.importStreets(filePath)
 		if err != nil {
-			log.Printf("Error importing streets for %s: %v", uf, err)
+			i.logger.Warn("Warning while importing streets for UF "+uf, zap.Error(err))
 			continue
 		}
 		totalStreets += ufCount
 	}
-	log.Printf("Streets imported: %d", totalStreets)
+	i.logger.Info("Streets imported", zap.Int("count", totalStreets))
 
-	log.Println("Importing large users...")
-	countLU, err := importLargeUsers(filepath.Join(dnePath, "LOG_GRANDE_USUARIO.TXT"))
+	i.logger.Info("Importing large users...")
+	countLU, err := i.importLargeUsers(filepath.Join(dnePath, "LOG_GRANDE_USUARIO.TXT"))
 	if err != nil {
-		log.Printf("Warning: %v", err)
+		i.logger.Warn("Warning while importing large users", zap.Error(err))
 	}
-	log.Printf("Large users imported: %d", countLU)
+	i.logger.Info("Large users imported", zap.Int("count", countLU))
 
-	log.Println("Importing Operational Units (UOP)...")
-	countUOP, err := importOperationalUnits(filepath.Join(dnePath, "LOG_UNID_OPER.TXT"))
+	i.logger.Info("Importing Operational Units (UOP)...")
+	countUOP, err := i.importOperationalUnits(filepath.Join(dnePath, "LOG_UNID_OPER.TXT"))
 	if err != nil {
-		log.Printf("Warning: %v", err)
+		i.logger.Warn("Warning while importing operational units", zap.Error(err))
 	}
-	log.Printf("UOPs imported: %d", countUOP)
+	i.logger.Info("UOPs imported", zap.Int("count", countUOP))
 
-	log.Println("Importing CPC...")
-	countCPC, err := importCPC(filepath.Join(dnePath, "LOG_CPC.TXT"))
+	i.logger.Info("Importing CPC...")
+	countCPC, err := i.importCPC(filepath.Join(dnePath, "LOG_CPC.TXT"))
 	if err != nil {
-		log.Printf("Warning: %v", err)
+		i.logger.Warn("Warning while importing CPC", zap.Error(err))
 	}
-	log.Printf("CPC imported: %d", countCPC)
+	i.logger.Info("CPC imported", zap.Int("count", countCPC))
 
 	elapsed := time.Since(start)
-	log.Printf("Import completed in %s", elapsed)
-	log.Printf("Total CEPs imported (approx): %d", len(seenCEPs))
+	i.logger.Info("Import completed", zap.Duration("duration", elapsed))
+	i.logger.Info("Total CEPs imported (approx)", zap.Int("count", len(seenCEPs)))
 }
 
-func loadLocalities(file string) error {
+func (i *ZipCodeImporter) loadLocalities(file string) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -226,7 +212,7 @@ func loadLocalities(file string) error {
 			Codigo:         strings.TrimSpace(record[0]),
 			UF:             strings.TrimSpace(record[1]),
 			Nome:           strings.TrimSpace(record[2]),
-			CEP:            normalizeCEP(strings.TrimSpace(record[3])),
+			CEP:            i.normalizeCEP(strings.TrimSpace(record[3])),
 			Situacao:       strings.TrimSpace(record[4]),
 			TipoLocalidade: strings.TrimSpace(record[5]),
 			CodigoSub:      strings.TrimSpace(record[6]),
@@ -240,7 +226,7 @@ func loadLocalities(file string) error {
 	return nil
 }
 
-func loadDistricts(file string) error {
+func (i *ZipCodeImporter) loadDistricts(file string) error {
 	f, err := os.Open(file)
 	if err != nil {
 		return err
@@ -280,7 +266,7 @@ func loadDistricts(file string) error {
 	return nil
 }
 
-func importLocalityCEPs() error {
+func (i *ZipCodeImporter) importLocalityCEPs() error {
 	wb := db.NewWriteBatch()
 	defer wb.Cancel()
 	batchSize := 5000
@@ -290,7 +276,7 @@ func importLocalityCEPs() error {
 		if loc.CEP == "" {
 			continue
 		}
-		cep := normalizeCEP(loc.CEP)
+		cep := i.normalizeCEP(loc.CEP)
 		if cep == "" {
 			continue
 		}
@@ -303,17 +289,17 @@ func importLocalityCEPs() error {
 			CodigoIBGE: loc.CodigoIBGE,
 			TipoOrigem: "localidade",
 		}
-		if err := writeCEPIfNew(wb, cep, cepComplete); err != nil {
-			log.Printf("Error writing CEP (locality) %s: %v", cep, err)
+		if err := i.writeCEPIfNew(wb, cep, cepComplete); err != nil {
+			i.logger.Warn("Warning while writing locality CEP", zap.String("cep", cep), zap.Error(err))
 			continue
 		}
 		count++
 		if count%batchSize == 0 {
 			if err := wb.Flush(); err != nil {
-				log.Printf("Error on flush (localities): %v", err)
+				i.logger.Warn("Warning on flush (localities)", zap.Error(err))
 			}
 			wb = db.NewWriteBatch()
-			log.Printf("Localities processed: %d", count)
+			i.logger.Info("Localities processed", zap.Int("count", count))
 		}
 	}
 	if err := wb.Flush(); err != nil {
@@ -322,7 +308,7 @@ func importLocalityCEPs() error {
 	return nil
 }
 
-func importStreets(file string) (int, error) {
+func (i *ZipCodeImporter) importStreets(file string) (int, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return 0, err
@@ -353,7 +339,7 @@ func importStreets(file string) (int, error) {
 		if len(record) < 8 {
 			continue
 		}
-		cep := normalizeCEP(strings.TrimSpace(record[7]))
+		cep := i.normalizeCEP(strings.TrimSpace(record[7]))
 		if cep == "" {
 			continue
 		}
@@ -412,16 +398,16 @@ func importStreets(file string) (int, error) {
 			TipoOrigem:     "logradouro",
 		}
 
-		if err := writeCEPIfNew(wb, cep, cepComplete); err != nil {
+		if err := i.writeCEPIfNew(wb, cep, cepComplete); err != nil {
 		}
 
 		count++
 		if count%batchSize == 0 {
 			if err := wb.Flush(); err != nil {
-				log.Printf("Error on flush (streets): %v", err)
+				i.logger.Warn("Warning on flush (streets)", zap.Error(err))
 			}
 			wb = db.NewWriteBatch()
-			log.Printf("Processed (streets): %d", count)
+			i.logger.Info("Processed (streets)", zap.Int("count", count))
 		}
 	}
 
@@ -431,7 +417,7 @@ func importStreets(file string) (int, error) {
 	return count, nil
 }
 
-func importLargeUsers(file string) (int, error) {
+func (i *ZipCodeImporter) importLargeUsers(file string) (int, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return 0, err
@@ -461,7 +447,7 @@ func importLargeUsers(file string) (int, error) {
 		if len(record) < 8 {
 			continue
 		}
-		cep := normalizeCEP(strings.TrimSpace(record[7]))
+		cep := i.normalizeCEP(strings.TrimSpace(record[7]))
 		if cep == "" {
 			continue
 		}
@@ -495,16 +481,16 @@ func importLargeUsers(file string) (int, error) {
 			NomeOrigem:  largeUserName,
 		}
 
-		if err := writeCEPIfNew(wb, cep, cepComplete); err != nil {
+		if err := i.writeCEPIfNew(wb, cep, cepComplete); err != nil {
 		}
 
 		count++
 		if count%batchSize == 0 {
 			if err := wb.Flush(); err != nil {
-				log.Printf("Error on flush (large users): %v", err)
+				i.logger.Warn("Warning on flush (large users)", zap.Error(err))
 			}
 			wb = db.NewWriteBatch()
-			log.Printf("Processed (large users): %d", count)
+			i.logger.Info("Processed (large users)", zap.Int("count", count))
 		}
 	}
 
@@ -514,7 +500,7 @@ func importLargeUsers(file string) (int, error) {
 	return count, nil
 }
 
-func importOperationalUnits(file string) (int, error) {
+func (i *ZipCodeImporter) importOperationalUnits(file string) (int, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return 0, err
@@ -544,7 +530,7 @@ func importOperationalUnits(file string) (int, error) {
 		if len(record) < 8 {
 			continue
 		}
-		cep := normalizeCEP(strings.TrimSpace(record[7]))
+		cep := i.normalizeCEP(strings.TrimSpace(record[7]))
 		if cep == "" {
 			continue
 		}
@@ -578,16 +564,16 @@ func importOperationalUnits(file string) (int, error) {
 			NomeOrigem:  uopName,
 		}
 
-		if err := writeCEPIfNew(wb, cep, cepComplete); err != nil {
+		if err := i.writeCEPIfNew(wb, cep, cepComplete); err != nil {
 		}
 
 		count++
 		if count%batchSize == 0 {
 			if err := wb.Flush(); err != nil {
-				log.Printf("Error on flush (UOP): %v", err)
+				i.logger.Warn("Warning on flush (UOP)", zap.Error(err))
 			}
 			wb = db.NewWriteBatch()
-			log.Printf("Processed (UOP): %d", count)
+			i.logger.Info("Processed (UOP)", zap.Int("count", count))
 		}
 	}
 
@@ -597,7 +583,7 @@ func importOperationalUnits(file string) (int, error) {
 	return count, nil
 }
 
-func importCPC(file string) (int, error) {
+func (i *ZipCodeImporter) importCPC(file string) (int, error) {
 	f, err := os.Open(file)
 	if err != nil {
 		return 0, err
@@ -627,7 +613,7 @@ func importCPC(file string) (int, error) {
 		if len(record) < 6 {
 			continue
 		}
-		cep := normalizeCEP(strings.TrimSpace(record[5]))
+		cep := i.normalizeCEP(strings.TrimSpace(record[5]))
 		if cep == "" {
 			continue
 		}
@@ -656,16 +642,16 @@ func importCPC(file string) (int, error) {
 			NomeOrigem:  cpcName,
 		}
 
-		if err := writeCEPIfNew(wb, cep, cepComplete); err != nil {
+		if err := i.writeCEPIfNew(wb, cep, cepComplete); err != nil {
 		}
 
 		count++
 		if count%batchSize == 0 {
 			if err := wb.Flush(); err != nil {
-				log.Printf("Error on flush (CPC): %v", err)
+				i.logger.Warn("Warning on flush (CPC)", zap.Error(err))
 			}
 			wb = db.NewWriteBatch()
-			log.Printf("Processed (CPC): %d", count)
+			i.logger.Info("Processed (CPC)", zap.Int("count", count))
 		}
 	}
 
@@ -673,4 +659,31 @@ func importCPC(file string) (int, error) {
 		return count, err
 	}
 	return count, nil
+}
+
+func (i *ZipCodeImporter) normalizeCEP(raw string) string {
+	cep := nonDigit.ReplaceAllString(raw, "")
+	if len(cep) != 8 {
+		return ""
+	}
+	return cep
+}
+
+func (i *ZipCodeImporter) writeCEPIfNew(wb *badger.WriteBatch, cep string, data CEPCompleto) error {
+	if cep == "" {
+		return fmt.Errorf("empty cep")
+	}
+	if seenCEPs[cep] {
+		return nil
+	}
+	jsonData, err := json.Marshal(data)
+	if err != nil {
+		return err
+	}
+	key := []byte("cep:" + cep)
+	if err := wb.Set(key, jsonData); err != nil {
+		return err
+	}
+	seenCEPs[cep] = true
+	return nil
 }

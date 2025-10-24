@@ -8,59 +8,42 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-var (
-	log   *zap.Logger
+type Logger struct {
+	*zap.Logger
 	sugar *zap.SugaredLogger
-)
+}
 
-func Init(level string, enableFile bool, filePath string) error {
+func NewLogger(level string) *Logger {
 	lvl := parseLevel(level)
+
+	l := &Logger{}
 
 	encCfg := zap.NewProductionEncoderConfig()
 	encCfg.EncodeTime = zapcore.ISO8601TimeEncoder
 	encCfg.TimeKey = "ts"
 
 	consoleEnc := zapcore.NewConsoleEncoder(encCfg)
-	jsonEnc := zapcore.NewJSONEncoder(encCfg)
 
 	cores := []zapcore.Core{
 		zapcore.NewCore(consoleEnc, zapcore.Lock(os.Stdout), lvl),
 	}
 
-	if enableFile {
-		if filePath == "" {
-			filePath = "app.log"
-		}
-		f, err := os.OpenFile(filePath, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
-		if err != nil {
-			return err
-		}
-		fileSync := zapcore.AddSync(f)
-		cores = append(cores, zapcore.NewCore(jsonEnc, fileSync, lvl))
-	}
-
 	core := zapcore.NewTee(cores...)
-	log = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
-	sugar = log.Sugar()
-	return nil
+	l.Logger = zap.New(core, zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
+	l.sugar = l.Logger.Sugar()
+
+	return l
 }
 
-// Logger returns the underlying *zap.Logger. May be nil if Init wasn't called.
-func Logger() *zap.Logger {
-	return log
+func (l *Logger) Sugar() *zap.SugaredLogger {
+	return l.sugar
 }
 
-// Sugar returns the *zap.SugaredLogger. May be nil if Init wasn't called.
-func Sugar() *zap.SugaredLogger {
-	return sugar
-}
-
-// Sync flushes any buffered log entries.
-func Sync() error {
-	if log == nil {
+func (l *Logger) Sync() error {
+	if l.Logger == nil {
 		return nil
 	}
-	return log.Sync()
+	return l.Logger.Sync()
 }
 
 func parseLevel(l string) zapcore.Level {

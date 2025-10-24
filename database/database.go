@@ -1,21 +1,54 @@
 package database
 
 import (
+	"fmt"
 	"time"
 
+	"github.com/brasilcep/brasilcep-webservice/logger"
 	"github.com/dgraph-io/badger/v4"
+	"github.com/spf13/viper"
+	"go.uber.org/zap"
 )
 
 var db *badger.DB
 
-func InitDatabase(path string) error {
+type BadgerLogger struct {
+	logger *logger.Logger
+}
+
+func (b *BadgerLogger) Errorf(format string, args ...interface{}) {
+	b.logger.Error(fmt.Sprintf(format, args...))
+}
+
+func (b *BadgerLogger) Warningf(format string, args ...interface{}) {
+	b.logger.Warn(fmt.Sprintf(format, args...))
+}
+
+func (b *BadgerLogger) Infof(format string, args ...interface{}) {
+	b.logger.Info(fmt.Sprintf(format, args...))
+}
+
+func (b *BadgerLogger) Debugf(format string, args ...interface{}) {
+	b.logger.Debug(fmt.Sprintf(format, args...))
+}
+
+func NewDatabase(conf *viper.Viper, logger *logger.Logger) error {
+	path := conf.GetString("db.path")
 	opts := badger.DefaultOptions(path)
-	opts.Logger = nil
-	// opts.Compression = badger.Snappy
+	opts.Logger = &BadgerLogger{logger: logger}
+	opts.Compression = 1
 	opts.IndexCacheSize = 100 << 20 // 100MB de cache para índices
+
+	logger.Info("Initializing database", zap.String("path", path))
 
 	var err error
 	db, err = badger.Open(opts)
+	if err != nil {
+		logger.Error("Failed to open database", zap.Error(err))
+		return err
+	}
+
+	logger.Info("Database successfully opened")
 
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)
@@ -39,18 +72,21 @@ func InitDatabase(path string) error {
 			})
 
 			if err != nil {
-				// Log error if needed
+				logger.Error("Error while iterating over database", zap.Error(err))
 				continue
 			}
 
-			// Log the count and size
-			println("Total CEPs:", count, "Database size (bytes):", dbSize)
+			logger.Debug("Database statistics", zap.Int("total_ceps", count), zap.Int64("database_size_bytes", dbSize))
 		}
 	}()
 
-	go garbageCollector(db)
+	go func() {
+		logger.Info("Starting garbage collector")
+		garbageCollector(db, logger)
+		logger.Info("Garbage collector stopped")
+	}()
 
-	return err
+	return nil
 }
 
 func GetDB() *badger.DB {
@@ -63,7 +99,7 @@ func CloseDatabase() {
 	}
 }
 
-func garbageCollector(db *badger.DB) {
+func garbageCollector(db *badger.DB, logger *logger.Logger) {
 	ticker := time.NewTicker(5 * time.Minute)
 	defer ticker.Stop()
 
@@ -71,6 +107,7 @@ func garbageCollector(db *badger.DB) {
 	again:
 		err := db.RunValueLogGC(0.5)
 		if err == nil {
+			logger.Info("Garbage collection completed successfully")
 			goto again
 		}
 	}
