@@ -1,0 +1,9 @@
+<svg width="300" height="150" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
+  <rect width="300" height="150" fill="none"/>
+  <text x="50%" y="70" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="52">
+    <tspan fill="#3BA935">Brasil</tspan><tspan fill="#1D62B3">CEP</tspan>
+  </text>
+  <text x="50%" y="110" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="38" fill="#1D62B3">
+    Webservice
+  </text>
+</svg>
