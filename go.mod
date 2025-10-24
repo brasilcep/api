@@ -1,4 +1,4 @@
-module github.com/brasilcep/brasilcep-webservice
+module github.com/brasilcep/api
 
 go 1.24.0
 

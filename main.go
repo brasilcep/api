@@ -1,11 +1,11 @@
 package main
 
 import (
-	"github.com/brasilcep/brasilcep-webservice/api"
-	"github.com/brasilcep/brasilcep-webservice/config"
-	"github.com/brasilcep/brasilcep-webservice/database"
-	"github.com/brasilcep/brasilcep-webservice/logger"
-	"github.com/brasilcep/brasilcep-webservice/zipcodes"
+	"github.com/brasilcep/api/api"
+	"github.com/brasilcep/api/config"
+	"github.com/brasilcep/api/database"
+	"github.com/brasilcep/api/logger"
+	"github.com/brasilcep/api/zipcodes"
 )
 
 func main() {

@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brasilcep/brasilcep-webservice/database"
-	"github.com/brasilcep/brasilcep-webservice/logger"
+	"github.com/brasilcep/api/database"
+	"github.com/brasilcep/api/logger"
 	badger "github.com/dgraph-io/badger/v4"
 	"go.uber.org/zap"
 	"golang.org/x/text/encoding/charmap"

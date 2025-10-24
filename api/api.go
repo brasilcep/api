@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/brasilcep/brasilcep-webservice/database"
-	"github.com/brasilcep/brasilcep-webservice/logger"
-	"github.com/brasilcep/brasilcep-webservice/zipcodes"
+	"github.com/brasilcep/api/database"
+	"github.com/brasilcep/api/logger"
+	"github.com/brasilcep/api/zipcodes"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"

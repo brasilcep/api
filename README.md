@@ -2,7 +2,7 @@
   <img src="./img/logo.svg" alt="Logo" width="400"/>
 </p>
 
-<a href="https://github.com/brasilcep/brasilcep-webservice/actions/workflows/cicd.yml"><img src="https://github.com/brasilcep/brasilcep-webservice/actions/workflows/cicd.yml/badge.svg" /></a>
+<a href="https://github.com/brasilcep/api/actions/workflows/cicd.yml"><img src="https://github.com/brasilcep/api/actions/workflows/cicd.yml/badge.svg" /></a>
 
 API REST para consulta de CEPs brasileiros, baseada na base oficial dos Correios (DNE) com propósito de hospedar no seu servidor sem necessidade de acesso a terceiros.
 
@@ -33,7 +33,7 @@ Projeto open source, rápido, eficiente e fácil de usar.
 
 1. Clone o repositório:
      ```sh
-     git clone https://github.com/brasilcep/brasilcep-webservice.git
+     git clone https://github.com/brasilcep/api.git
      cd brasilcep-webservice
      ```
 2. Instale o Go (>=1.18).
@@ -96,7 +96,7 @@ Para importar a base oficial dos Correios (DNE):
 1. Baixe os arquivos TXT do DNE e coloque-os na pasta definida em `DB_RAW_PATH` (por padrão, `./dne`).
 2. Execute o importador:
      ```go
-     import "github.com/brasilcep/brasilcep-webservice/zipcodes"
+     import "github.com/brasilcep/api/zipcodes"
      zipImporter := zipcodes.NewZipCodeImporter(logger)
      zipImporter.PopulateZipcodes("./dne")
      ```

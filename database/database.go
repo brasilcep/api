@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/brasilcep/brasilcep-webservice/logger"
+	"github.com/brasilcep/api/logger"
 	"github.com/dgraph-io/badger/v4"
 	"github.com/spf13/viper"
 	"go.uber.org/zap"
