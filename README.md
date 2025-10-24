@@ -56,7 +56,7 @@ Para compilar o binário localmente:
 ```sh
 make build
 ```
-O binário será gerado em `./bin/brasilcep-webservice`.
+O binário será gerado em `./wservice`.
 
 ## Configurações via ENV
 
