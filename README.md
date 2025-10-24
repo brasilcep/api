@@ -24,6 +24,7 @@ Projeto open source, rápido, eficiente e fácil de usar.
   - [`GET /debug/stats`](#get-debugstats)
 - [Configurações da API](#configurações-da-api)
 - [Licença](#licença)
+- [Licença](#licença-1)
 - [Contribua](#contribua)
 
 ---
@@ -268,6 +269,19 @@ Estatísticas dos CEPs por UF.
 
 ## Licença
 MIT
+
+## Licença
+
+Este projeto está licenciado sob a Licença MIT - consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
+
+**Resumo da Licença:**
+- Uso comercial permitido
+- Modificação permitida
+- Distribuição permitida
+- Uso privado permitido
+- Sem garantia
+- Exige atribuição do autor
+
 
 ## Contribua
 Pull requests são bem-vindos! Abra issues para sugestões ou problemas.
