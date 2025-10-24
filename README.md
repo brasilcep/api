@@ -1,6 +1,8 @@
 [conteúdo antigo ou vazio]
 # BrasilCEP Webservice
 
+[![Tests](https://github.com/brasilcep/brasilcep-webservice/actions/workflows/cicd.yml/badge.svg)](https://github.com/brasilcep/brasilcep-webservice/actions/workflows/cicd.yml)
+
 API REST para consulta de CEPs brasileiros, baseada na base oficial dos Correios (DNE). Projeto open source, rápido, eficiente e fácil de usar.
 
 ## Sumário
