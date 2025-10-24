@@ -70,7 +70,7 @@ jobs:
         run: go mod download
 
       - name: Build application
-        run: make build && pwd && ls -la
+        run: make build && chmod +x ./wserver
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v2
@@ -83,7 +83,7 @@ jobs:
           chmod +x ./scripts/dne_download.sh
           ./scripts/dne_download.sh ${{ secrets.DNE_USERNAME }} ${{ secrets.DNE_PASSWORD }}
           echo "Seeding DNE data..."
-          MODE=seed ./wservice
+          MODE=seed ./wserver
           rm -rf ./dne/
 
       - name: Get version tag
