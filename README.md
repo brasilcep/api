@@ -1,17 +1,27 @@
-[conteúdo antigo ou vazio]
-# BrasilCEP Webservice
+[![Logo](./img/logo.png)](https://brasilcep.github.io)
+
 
 [![Tests](https://github.com/brasilcep/brasilcep-webservice/actions/workflows/cicd.yml/badge.svg)](https://github.com/brasilcep/brasilcep-webservice/actions/workflows/cicd.yml)
 
 API REST para consulta de CEPs brasileiros, baseada na base oficial dos Correios (DNE). Projeto open source, rápido, eficiente e fácil de usar.
 
 ## Sumário
+- [Sumário](#sumário)
 - [Como rodar](#como-rodar)
 - [Build local](#build-local)
-- [Configurações via ENV](#configuracoes-via-env)
-- [Importação da base DNE](#importacao-da-base-dne)
+- [Configurações via ENV](#configurações-via-env)
+- [Importação da base DNE](#importação-da-base-dne)
 - [Endpoints da API](#endpoints-da-api)
-- [Configurações da API](#configuracoes-da-api)
+  - [`GET /cep/:cep`](#get-cepcep)
+  - [`GET /healthcheck`](#get-healthcheck)
+  - [`GET /debug/list?prefix=XXXXX`](#get-debuglistprefixxxxxx)
+  - [`GET /debug/count`](#get-debugcount)
+  - [`GET /debug/stats`](#get-debugstats)
+- [Configurações da API](#configurações-da-api)
+- [Licença](#licença)
+- [Contribua](#contribua)
+- [Modo populate: importação da base DNE](#modo-populate-importação-da-base-dne)
+  - [Estrutura de pastas esperada para a base DNE](#estrutura-de-pastas-esperada-para-a-base-dne)
 
 ---
 
