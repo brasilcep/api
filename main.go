@@ -1,8 +1,6 @@
 package main
 
 import (
-	"flag"
-
 	"github.com/brasilcep/brasilcep-webservice/api"
 	"github.com/brasilcep/brasilcep-webservice/config"
 	"github.com/brasilcep/brasilcep-webservice/database"
@@ -19,21 +17,17 @@ func main() {
 
 	database.NewDatabase(config, logger)
 
-	var (
-		listen   = flag.Bool("listen", true, "start the HTTP server")
-		populate = flag.Bool("populate", true, "populate the database with DNE data")
-		download = flag.Bool("download", false, "download DNE data from Brasil Correios (requires a valid login)")
-	)
+	mode := config.GetString("mode")
 
-	flag.Parse()
-
-	if *listen {
+	switch mode {
+	case "listen":
 		api := api.NewAPI(config, logger)
 		api.Listen()
-	} else if *populate {
+	case "populate":
+		dnePath := config.GetString("db.raw.path")
 		zipcodesImporter := zipcodes.NewZipCodeImporter(logger)
-		zipcodesImporter.PopulateZipcodes("./dne")
-	} else if *download {
-
+		zipcodesImporter.PopulateZipcodes(dnePath)
+	default:
+		logger.Fatal("Invalid mode specified")
 	}
 }

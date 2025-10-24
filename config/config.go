@@ -9,8 +9,6 @@ import (
 func NewConfig() *viper.Viper {
 	conf := viper.New()
 
-	conf.AutomaticEnv()
-
 	conf.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 
 	conf.SetDefault("mode", "listen")
@@ -32,9 +30,12 @@ func NewConfig() *viper.Viper {
 	conf.SetDefault("api.cors.allow.headers", []string{"Origin", "Content-Type", "Accept", "Authorization"})
 
 	conf.SetDefault("db.path", "./data")
+	conf.SetDefault("db.raw.path", "./dne")
 
 	conf.SetDefault("log.format", "json")
 	conf.SetDefault("log.level", "info")
+
+	conf.AutomaticEnv()
 
 	return conf
 }

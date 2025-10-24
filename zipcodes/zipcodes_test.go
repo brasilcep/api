@@ -6,9 +6,11 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/brasilcep/brasilcep-webservice/logger"
 	badger "github.com/dgraph-io/badger/v4"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/text/encoding/charmap"
 )
 
 func setupTestDB(t *testing.T) (*badger.DB, func()) {
@@ -27,14 +29,28 @@ func setupTestDB(t *testing.T) (*badger.DB, func()) {
 	return testDB, cleanup
 }
 
-func resetGlobalState() {
+func setupImporter(t *testing.T) (*ZipCodeImporter, func()) {
+	testDB, cleanup := setupTestDB(t)
+
+	// Reset global state
 	localities = make(map[string]*Localidade)
 	districts = make(map[string]*Bairro)
 	seenCEPs = make(map[string]bool)
-	db = nil
+	db = testDB
+
+	testLogger := logger.NewLogger("info")
+	importer := &ZipCodeImporter{
+		db:     testDB,
+		logger: testLogger,
+	}
+
+	return importer, cleanup
 }
 
 func TestNormalizeCEP(t *testing.T) {
+	importer, cleanup := setupImporter(t)
+	defer cleanup()
+
 	tests := []struct {
 		name     string
 		input    string
@@ -84,22 +100,19 @@ func TestNormalizeCEP(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result := normalizeCEP(tt.input)
+			result := importer.normalizeCEP(tt.input)
 			assert.Equal(t, tt.expected, result)
 		})
 	}
 }
 
 func TestWriteCEPIfNew(t *testing.T) {
-	testDB, cleanup := setupTestDB(t)
+	importer, cleanup := setupImporter(t)
 	defer cleanup()
-
-	db = testDB
-	defer resetGlobalState()
 
 	t.Run("write new CEP successfully", func(t *testing.T) {
 		seenCEPs = make(map[string]bool)
-		wb := testDB.NewWriteBatch()
+		wb := importer.db.NewWriteBatch()
 		defer wb.Cancel()
 
 		cepData := CEPCompleto{
@@ -111,14 +124,14 @@ func TestWriteCEPIfNew(t *testing.T) {
 			TipoOrigem: "logradouro",
 		}
 
-		err := writeCEPIfNew(wb, "12345678", cepData)
+		err := importer.writeCEPIfNew(wb, "12345678", cepData)
 		assert.NoError(t, err)
 		assert.True(t, seenCEPs["12345678"])
 
 		err = wb.Flush()
 		assert.NoError(t, err)
 
-		err = testDB.View(func(txn *badger.Txn) error {
+		err = importer.db.View(func(txn *badger.Txn) error {
 			item, err := txn.Get([]byte("cep:12345678"))
 			if err != nil {
 				return err
@@ -141,7 +154,7 @@ func TestWriteCEPIfNew(t *testing.T) {
 		seenCEPs = make(map[string]bool)
 		seenCEPs["99999999"] = true
 
-		wb := testDB.NewWriteBatch()
+		wb := importer.db.NewWriteBatch()
 		defer wb.Cancel()
 
 		cepData := CEPCompleto{
@@ -149,28 +162,28 @@ func TestWriteCEPIfNew(t *testing.T) {
 			Logradouro: "Rua Nova",
 		}
 
-		err := writeCEPIfNew(wb, "99999999", cepData)
+		err := importer.writeCEPIfNew(wb, "99999999", cepData)
 		assert.NoError(t, err)
 	})
 
 	t.Run("return error for empty CEP", func(t *testing.T) {
 		seenCEPs = make(map[string]bool)
-		wb := testDB.NewWriteBatch()
+		wb := importer.db.NewWriteBatch()
 		defer wb.Cancel()
 
 		cepData := CEPCompleto{
 			Logradouro: "Rua Teste",
 		}
 
-		err := writeCEPIfNew(wb, "", cepData)
+		err := importer.writeCEPIfNew(wb, "", cepData)
 		assert.Error(t, err)
 		assert.Equal(t, "empty cep", err.Error())
 	})
 }
 
 func TestLoadLocalities(t *testing.T) {
-	resetGlobalState()
-	defer resetGlobalState()
+	importer, cleanup := setupImporter(t)
+	defer cleanup()
 
 	tmpDir, err := os.MkdirTemp("", "localities-test-*")
 	require.NoError(t, err)
@@ -184,10 +197,15 @@ func TestLoadLocalities(t *testing.T) {
 			"002@RJ@Rio de Janeiro@20000-000@1@M@@RJ@3304557\n" +
 			"003@MG@Belo Horizonte@30000-000@1@M@@BH@3106200\n"
 
-		err := os.WriteFile(localitiesFile, []byte(content), 0644)
+		// Encode content to ISO-8859-1
+		encoder := charmap.ISO8859_1.NewEncoder()
+		encodedContent, err := encoder.String(content)
 		require.NoError(t, err)
 
-		err = loadLocalities(localitiesFile)
+		err = os.WriteFile(localitiesFile, []byte(encodedContent), 0644)
+		require.NoError(t, err)
+
+		err = importer.loadLocalities(localitiesFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(localities))
 
@@ -208,24 +226,29 @@ func TestLoadLocalities(t *testing.T) {
 			"002@RJ\n" +
 			"003@MG@Belo Horizonte@30000-000@1@M@@BH@3106200\n"
 
-		err := os.WriteFile(localitiesFile, []byte(content), 0644)
+		// Encode content to ISO-8859-1
+		encoder := charmap.ISO8859_1.NewEncoder()
+		encodedContent, err := encoder.String(content)
 		require.NoError(t, err)
 
-		err = loadLocalities(localitiesFile)
+		err = os.WriteFile(localitiesFile, []byte(encodedContent), 0644)
+		require.NoError(t, err)
+
+		err = importer.loadLocalities(localitiesFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(localities))
 	})
 
 	t.Run("return error for non-existent file", func(t *testing.T) {
 		localities = make(map[string]*Localidade)
-		err := loadLocalities("/non/existent/file.txt")
+		err := importer.loadLocalities("/non/existent/file.txt")
 		assert.Error(t, err)
 	})
 }
 
 func TestLoadDistricts(t *testing.T) {
-	resetGlobalState()
-	defer resetGlobalState()
+	importer, cleanup := setupImporter(t)
+	defer cleanup()
 
 	tmpDir, err := os.MkdirTemp("", "districts-test-*")
 	require.NoError(t, err)
@@ -242,7 +265,7 @@ func TestLoadDistricts(t *testing.T) {
 		err := os.WriteFile(districtsFile, []byte(content), 0644)
 		require.NoError(t, err)
 
-		err = loadDistricts(districtsFile)
+		err = importer.loadDistricts(districtsFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 3, len(districts))
 
@@ -265,24 +288,21 @@ func TestLoadDistricts(t *testing.T) {
 		err := os.WriteFile(districtsFile, []byte(content), 0644)
 		require.NoError(t, err)
 
-		err = loadDistricts(districtsFile)
+		err = importer.loadDistricts(districtsFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, len(districts))
 	})
 
 	t.Run("return error for non-existent file", func(t *testing.T) {
 		districts = make(map[string]*Bairro)
-		err := loadDistricts("/non/existent/file.txt")
+		err := importer.loadDistricts("/non/existent/file.txt")
 		assert.Error(t, err)
 	})
 }
 
 func TestImportLocalityCEPs(t *testing.T) {
-	testDB, cleanup := setupTestDB(t)
+	importer, cleanup := setupImporter(t)
 	defer cleanup()
-
-	db = testDB
-	defer resetGlobalState()
 
 	t.Run("import locality CEPs successfully", func(t *testing.T) {
 		localities = make(map[string]*Localidade)
@@ -303,11 +323,11 @@ func TestImportLocalityCEPs(t *testing.T) {
 			CodigoIBGE: "3304557",
 		}
 
-		err := importLocalityCEPs()
+		err := importer.importLocalityCEPs()
 		assert.NoError(t, err)
 		assert.Equal(t, 2, len(seenCEPs))
 
-		err = testDB.View(func(txn *badger.Txn) error {
+		err = importer.db.View(func(txn *badger.Txn) error {
 			item, err := txn.Get([]byte("cep:01000000"))
 			if err != nil {
 				return err
@@ -339,18 +359,15 @@ func TestImportLocalityCEPs(t *testing.T) {
 			CEP:    "",
 		}
 
-		err := importLocalityCEPs()
+		err := importer.importLocalityCEPs()
 		assert.NoError(t, err)
 		assert.Equal(t, 0, len(seenCEPs))
 	})
 }
 
 func TestImportStreets(t *testing.T) {
-	testDB, cleanup := setupTestDB(t)
+	importer, cleanup := setupImporter(t)
 	defer cleanup()
-
-	db = testDB
-	defer resetGlobalState()
 
 	tmpDir, err := os.MkdirTemp("", "streets-test-*")
 	require.NoError(t, err)
@@ -378,11 +395,11 @@ func TestImportStreets(t *testing.T) {
 		err := os.WriteFile(streetsFile, []byte(content), 0644)
 		require.NoError(t, err)
 
-		count, err := importStreets(streetsFile)
+		count, err := importer.importStreets(streetsFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, count)
 
-		err = testDB.View(func(txn *badger.Txn) error {
+		err = importer.db.View(func(txn *badger.Txn) error {
 			item, err := txn.Get([]byte("cep:01310100"))
 			if err != nil {
 				return err
@@ -422,11 +439,11 @@ func TestImportStreets(t *testing.T) {
 		err := os.WriteFile(streetsFile, []byte(content), 0644)
 		require.NoError(t, err)
 
-		count, err := importStreets(streetsFile)
+		count, err := importer.importStreets(streetsFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, count)
 
-		err = testDB.View(func(txn *badger.Txn) error {
+		err = importer.db.View(func(txn *badger.Txn) error {
 			item, err := txn.Get([]byte("cep:01013001"))
 			if err != nil {
 				return err
@@ -452,18 +469,15 @@ func TestImportStreets(t *testing.T) {
 		err := os.WriteFile(streetsFile, []byte(content), 0644)
 		require.NoError(t, err)
 
-		count, err := importStreets(streetsFile)
+		count, err := importer.importStreets(streetsFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 0, count)
 	})
 }
 
 func TestImportLargeUsers(t *testing.T) {
-	testDB, cleanup := setupTestDB(t)
+	importer, cleanup := setupImporter(t)
 	defer cleanup()
-
-	db = testDB
-	defer resetGlobalState()
 
 	tmpDir, err := os.MkdirTemp("", "largeusers-test-*")
 	require.NoError(t, err)
@@ -491,11 +505,11 @@ func TestImportLargeUsers(t *testing.T) {
 		err := os.WriteFile(largeUsersFile, []byte(content), 0644)
 		require.NoError(t, err)
 
-		count, err := importLargeUsers(largeUsersFile)
+		count, err := importer.importLargeUsers(largeUsersFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, count)
 
-		err = testDB.View(func(txn *badger.Txn) error {
+		err = importer.db.View(func(txn *badger.Txn) error {
 			item, err := txn.Get([]byte("cep:01234567"))
 			if err != nil {
 				return err
@@ -518,11 +532,8 @@ func TestImportLargeUsers(t *testing.T) {
 }
 
 func TestImportOperationalUnits(t *testing.T) {
-	testDB, cleanup := setupTestDB(t)
+	importer, cleanup := setupImporter(t)
 	defer cleanup()
-
-	db = testDB
-	defer resetGlobalState()
 
 	tmpDir, err := os.MkdirTemp("", "uop-test-*")
 	require.NoError(t, err)
@@ -547,14 +558,19 @@ func TestImportOperationalUnits(t *testing.T) {
 		uopFile := filepath.Join(tmpDir, "LOG_UNID_OPER.TXT")
 		content := "001@RJ@001@002@@Agência Central@Av Atlântica 1000@22070-000@CP@Ag Ctr\n"
 
-		err := os.WriteFile(uopFile, []byte(content), 0644)
+		// Encode content to ISO-8859-1
+		encoder := charmap.ISO8859_1.NewEncoder()
+		encodedContent, err := encoder.String(content)
 		require.NoError(t, err)
 
-		count, err := importOperationalUnits(uopFile)
+		err = os.WriteFile(uopFile, []byte(encodedContent), 0644)
+		require.NoError(t, err)
+
+		count, err := importer.importOperationalUnits(uopFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, count)
 
-		err = testDB.View(func(txn *badger.Txn) error {
+		err = importer.db.View(func(txn *badger.Txn) error {
 			item, err := txn.Get([]byte("cep:22070000"))
 			if err != nil {
 				return err
@@ -577,11 +593,8 @@ func TestImportOperationalUnits(t *testing.T) {
 }
 
 func TestImportCPC(t *testing.T) {
-	testDB, cleanup := setupTestDB(t)
+	importer, cleanup := setupImporter(t)
 	defer cleanup()
-
-	db = testDB
-	defer resetGlobalState()
 
 	tmpDir, err := os.MkdirTemp("", "cpc-test-*")
 	require.NoError(t, err)
@@ -604,11 +617,11 @@ func TestImportCPC(t *testing.T) {
 		err := os.WriteFile(cpcFile, []byte(content), 0644)
 		require.NoError(t, err)
 
-		count, err := importCPC(cpcFile)
+		count, err := importer.importCPC(cpcFile)
 		assert.NoError(t, err)
 		assert.Equal(t, 1, count)
 
-		err = testDB.View(func(txn *badger.Txn) error {
+		err = importer.db.View(func(txn *badger.Txn) error {
 			item, err := txn.Get([]byte("cep:30130150"))
 			if err != nil {
 				return err
