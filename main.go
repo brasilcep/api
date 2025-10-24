@@ -1,81 +1,29 @@
 package main
 
 import (
+	"flag"
+
+	"github.com/brasilcep/brasilcep-webservice/api"
 	"github.com/brasilcep/brasilcep-webservice/database"
+	"github.com/brasilcep/brasilcep-webservice/zipcodes"
 )
 
 func main() {
+	database.InitDatabase("./data")
 
-	database.InitDatabase("../data")
+	var (
+		listen   = flag.Bool("listen", true, "start the HTTP server")
+		populate = flag.Bool("populate", true, "populate the database with DNE data")
+		download = flag.Bool("download", false, "download DNE data from Brasil Correios (requires a valid login)")
+		port     = flag.Int("port", 8080, "port to listen on")
+	)
+	flag.Parse()
 
+	if *listen {
+		api.Listen(*port)
+	} else if *populate {
+		zipcodes.PopulateZipcodes("./dne")
+	} else if *download {
+
+	}
 }
-
-// Função auxiliar para popular o banco com dados
-// Execute uma vez para carregar os CEPs
-// func popularDados() {
-// 	dados := []Endereco{
-// 		{
-// 			CEP:        "01310100",
-// 			Logradouro: "Avenida Paulista",
-// 			Bairro:     "Bela Vista",
-// 			Cidade:     "São Paulo",
-// 			UF:         "SP",
-// 		},
-// 		{
-// 			CEP:        "20040020",
-// 			Logradouro: "Praça Mauá",
-// 			Bairro:     "Centro",
-// 			Cidade:     "Rio de Janeiro",
-// 			UF:         "RJ",
-// 		},
-// 		{
-// 			CEP:        "30130100",
-// 			Logradouro: "Avenida Afonso Pena",
-// 			Bairro:     "Centro",
-// 			Cidade:     "Belo Horizonte",
-// 			UF:         "MG",
-// 		},
-// 	}
-
-// 	err := db.Update(func(txn *badger.Txn) error {
-// 		for _, end := range dados {
-// 			valor, err := json.Marshal(end)
-// 			if err != nil {
-// 				return err
-// 			}
-
-// 			chave := []byte("cep:" + end.CEP)
-// 			err = txn.Set(chave, valor)
-// 			if err != nil {
-// 				return err
-// 			}
-// 		}
-// 		return nil
-// 	})
-
-// 	if err != nil {
-// 		log.Printf("Erro ao popular dados: %v", err)
-// 	} else {
-// 		log.Println("Dados populados com sucesso!")
-// 	}
-// }
-
-// // Função para importar CEPs em lote (melhor performance)
-// func ImportarCEPsLote(ceps []Endereco) error {
-// 	wb := db.NewWriteBatch()
-// 	defer wb.Cancel()
-
-// 	for _, end := range ceps {
-// 		valor, err := json.Marshal(end)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		chave := []byte("cep:" + end.CEP)
-// 		if err := wb.Set(chave, valor); err != nil {
-// 			return err
-// 		}
-// 	}
-
-// 	return wb.Flush()
-// }
