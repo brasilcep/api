@@ -1,0 +1,8 @@
+data/
+dne/
+*.log
+*.tmp
+.cache/
+.vscode/
+.idea/
+brasilcep-webservice
