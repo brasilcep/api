@@ -1,9 +1,17 @@
-<svg width="300" height="150" viewBox="0 0 300 150" xmlns="http://www.w3.org/2000/svg">
-  <rect width="300" height="150" fill="none"/>
-  <text x="50%" y="70" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-weight="bold" font-size="52">
-    <tspan fill="#3BA935">Brasil</tspan><tspan fill="#1D62B3">CEP</tspan>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 180" fill="none">
+  <!-- Ícone -->
+  <g transform="translate(30,20)">
+    <!-- Base verde -->
+    <path transform="translate(0,10)" d="M45 90 L95 60 L145 90 L95 120 Z" fill="#009739"/>
+    <!-- Marcador amarelo -->
+    <path d="M95 25 C78 25 65 38 65 55 C65 76 95 110 95 110 C95 110 125 76 125 55 C125 38 112 25 95 25 Z M95 70 A15 15 0 1 1 95 40 A15 15 0 0 1 95 70 Z" fill="#FFCC29"/>
+  </g>
+
+  <!-- Texto -->
+  <text x="200" y="90" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="bold" fill="#009739">
+    Brasil CEP
   </text>
-  <text x="50%" y="110" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="38" fill="#1D62B3">
-    Webservice
+  <text x="200" y="135" font-family="Arial, Helvetica, sans-serif" font-size="42" font-weight="bold" fill="#0056B8">
+    WebService
   </text>
 </svg>
