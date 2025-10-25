@@ -1,7 +1,7 @@
-data/
 dne/
 tmp/
 tmp_dne/
+data/
 *.zip
 *.log
 *.tmp

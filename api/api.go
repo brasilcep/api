@@ -165,6 +165,10 @@ func (api *API) findZipcode(c echo.Context) error {
 
 	db := database.GetDB()
 
+	if db == nil {
+		return c.JSON(http.StatusServiceUnavailable, ErrorResponse{Error: "database not ready"})
+	}
+
 	err := db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte("cep:" + cep))
 		if err != nil {

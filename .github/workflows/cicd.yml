@@ -84,13 +84,14 @@ jobs:
           ./scripts/dne_download.sh ${{ secrets.DNE_USERNAME }} ${{ secrets.DNE_PASSWORD }}
           echo "Seeding DNE data..."
           MODE=seed ./wserver
+          tar -czf data.tar.gz data/
           rm -rf ./dne/
 
       - name: Get version tag
         id: get_tag
         run: |
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
+            echo "tag=${GITHUB_REF_NAME}" >> $GITH UB_OUTPUT
             else
             echo "tag=${GITHUB_SHA:0:7}-unstable" >> $GITHUB_OUTPUT
           fi

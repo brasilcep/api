@@ -34,10 +34,22 @@ func (b *BadgerLogger) Debugf(format string, args ...interface{}) {
 
 func NewDatabase(conf *viper.Viper, logger *logger.Logger) error {
 	path := conf.GetString("db.path")
-	opts := badger.DefaultOptions(path)
-	opts.Logger = &BadgerLogger{logger: logger}
-	opts.Compression = 1
-	opts.IndexCacheSize = 100 << 20 // 100MB de cache para índices
+	opts := badger.DefaultOptions(path).
+		WithCompression(0).
+		WithSyncWrites(false).
+		WithVerifyValueChecksum(false).
+		WithDetectConflicts(false).
+		WithCompactL0OnClose(false).
+		WithNumGoroutines(16).
+		WithBlockCacheSize(512 << 20).
+		WithIndexCacheSize(256 << 20).
+		WithLoggingLevel(badger.WARNING).
+		WithLogger(&BadgerLogger{logger: logger})
+
+	// opts.Compression = 1
+	// opts.IndexCacheSize = 100 << 20 // 100MB de cache para índices
+
+	startTime := time.Now()
 
 	logger.Info("Initializing database", zap.String("path", path))
 
@@ -48,7 +60,10 @@ func NewDatabase(conf *viper.Viper, logger *logger.Logger) error {
 		return err
 	}
 
-	logger.Info("Database successfully opened")
+	endTime := time.Now()
+	elapsed := endTime.Sub(startTime)
+
+	logger.Info("Database successfully opened", zap.Duration("duration", elapsed))
 
 	go func() {
 		ticker := time.NewTicker(10 * time.Minute)

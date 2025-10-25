@@ -20,3 +20,12 @@ test:
 	go test -v ./......
 lint:
 	golangci-lint run --timeout 5m
+
+docker-build:
+	tar -czf data.tar.gz data/
+	docker build -t brasilcep/api:dev .
+
+run-docker: 
+	docker run --cpus="0.5" --memory="512m" \
+	-p 8080:8080 \
+	brasilcep/api:dev
