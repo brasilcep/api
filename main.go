@@ -8,8 +8,22 @@ import (
 	"github.com/brasilcep/api/zipcodes"
 )
 
+var (
+	Version  = "dev"
+	Commit   = "none"
+	Repo     = "unknown"
+	Compiler = "unknown"
+)
+
 func main() {
 	config := config.NewConfig()
+
+	buildInfo := api.BuildInfo{
+		Version:  Version,
+		Commit:   Commit,
+		Repo:     Repo,
+		Compiler: Compiler,
+	}
 
 	log_level := config.GetString("log.level")
 
@@ -21,7 +35,7 @@ func main() {
 
 	switch mode {
 	case "listen":
-		api := api.NewAPI(config, logger)
+		api := api.NewAPI(config, logger, buildInfo)
 		api.Listen()
 	case "seed":
 		dnePath := config.GetString("db.raw.path")

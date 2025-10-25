@@ -19,28 +19,30 @@ import (
 	"golang.org/x/time/rate"
 )
 
-var (
-	Version  = "dev"
-	Commit   = "none"
-	Repo     = "unknown"
-	Compiler = "unknown"
-)
-
 type API struct {
-	config *viper.Viper
-	logger *logger.Logger
-	echo   *echo.Echo
+	config    *viper.Viper
+	logger    *logger.Logger
+	echo      *echo.Echo
+	buildInfo BuildInfo
+}
+
+type BuildInfo struct {
+	Version  string
+	Commit   string
+	Repo     string
+	Compiler string
 }
 
 type ErrorResponse struct {
 	Error string `json:"error"`
 }
 
-func NewAPI(config *viper.Viper, logger *logger.Logger) *API {
+func NewAPI(config *viper.Viper, logger *logger.Logger, buildInfo BuildInfo) *API {
 	return &API{
-		config: config,
-		logger: logger,
-		echo:   echo.New(),
+		config:    config,
+		logger:    logger,
+		echo:      echo.New(),
+		buildInfo: buildInfo,
 	}
 }
 
@@ -137,10 +139,10 @@ func (api *API) Listen() {
 	}
 
 	fmt.Printf("Brasil CEP Webservice - Brazilian Zip Code API")
-	fmt.Printf("version: %s\n", Version)
-	fmt.Printf("commit: %s\n", Commit)
-	fmt.Printf("repo: %s\n", Repo)
-	fmt.Printf("compiler: %s\n", Compiler)
+	fmt.Printf("version: %s\n", api.buildInfo.Version)
+	fmt.Printf("commit: %s\n", api.buildInfo.Commit)
+	fmt.Printf("repo: %s\n", api.buildInfo.Repo)
+	fmt.Printf("compiler: %s\n", api.buildInfo.Compiler)
 	fmt.Printf("\n")
 
 	port := api.config.GetInt("api.port")
@@ -204,9 +206,9 @@ func (api *API) health(c echo.Context) error {
 		Repo    string `json:"repo"`
 	}{
 		Status:  "ok",
-		Version: Version,
-		Commit:  Commit,
-		Repo:    Repo,
+		Version: api.buildInfo.Version,
+		Commit:  api.buildInfo.Commit,
+		Repo:    api.buildInfo.Repo,
 	}
 
 	return c.JSON(http.StatusOK, resp)
