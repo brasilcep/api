@@ -91,7 +91,7 @@ jobs:
         id: get_tag
         run: |
           if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
-            echo "tag=${GITHUB_REF_NAME}" >> $GITH UB_OUTPUT
+            echo "tag=${GITHUB_REF_NAME}" >> $GITHUB_OUTPUT
             else
             echo "tag=${GITHUB_SHA:0:7}-unstable" >> $GITHUB_OUTPUT
           fi
