@@ -148,6 +148,10 @@ func (api *API) Listen() {
 	api.logger.Info("Starting HTTP server", zap.Int("port", port))
 	api.logger.Info(fmt.Sprintf("Listening on :%d", port))
 
+	count, _ := count()
+
+	api.logger.Info("Total CEPs in database loaded", zap.Int("total_ceps", count))
+
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }
 
@@ -263,10 +267,21 @@ func (api *API) list(c echo.Context) error {
 }
 
 func (api *API) count(c echo.Context) error {
+
+	count, err := count()
+
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Erro ao contar CEPs"})
+	}
+
+	return c.JSON(http.StatusOK, map[string]interface{}{
+		"total_ceps": count,
+	})
+}
+
+func count() (int, error) {
+	var count int
 	db := database.GetDB()
-
-	count := 0
-
 	err := db.View(func(txn *badger.Txn) error {
 		opts := badger.DefaultIteratorOptions
 		opts.PrefetchValues = false // Não precisa dos valores, só contar
@@ -279,14 +294,11 @@ func (api *API) count(c echo.Context) error {
 		}
 		return nil
 	})
-
 	if err != nil {
-		return c.JSON(http.StatusInternalServerError, ErrorResponse{Error: "Erro ao contar CEPs"})
+		return 0, err
 	}
 
-	return c.JSON(http.StatusOK, map[string]interface{}{
-		"total_ceps": count,
-	})
+	return count, nil
 }
 
 func (api *API) stats(c echo.Context) error {

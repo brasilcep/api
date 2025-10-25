@@ -11,7 +11,8 @@ Projeto open source, rápido, eficiente e fácil de usar.
 ## Sumário
 - [Sumário](#sumário)
 - [Como rodar](#como-rodar)
-- [Build local](#build-local)
+  - [Docker (base de CEPs pré fabricada inclusa)](#docker-base-de-ceps-pré-fabricada-inclusa)
+  - [Desenvolvimento / sem docker](#desenvolvimento--sem-docker)
 - [Configurações via ENV](#configurações-via-env)
 - [Importação da base DNE](#importação-da-base-dne)
 - [Modo seed: importação da base DNE](#modo-seed-importação-da-base-dne)
@@ -31,6 +32,13 @@ Projeto open source, rápido, eficiente e fácil de usar.
 
 ## Como rodar
 
+### Docker (base de CEPs pré fabricada inclusa)
+```bash
+docker run -p 8080:8080 brasilcep/api:latest
+``` 
+
+### Desenvolvimento / sem docker
+
 1. Clone o repositório:
      ```sh
      git clone https://github.com/brasilcep/api.git
@@ -49,8 +57,6 @@ Projeto open source, rápido, eficiente e fácil de usar.
      ```sh
      make run
      ```
-
-## Build local
 
 Para compilar o binário localmente:
 ```sh
