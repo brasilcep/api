@@ -4,7 +4,7 @@
 
 <a href="https://github.com/brasilcep/api/actions/workflows/cicd.yml"><img src="https://github.com/brasilcep/api/actions/workflows/cicd.yml/badge.svg" /></a>
 
-API REST para consulta de CEPs brasileiros, baseada na base oficial dos Correios (DNE) com propósito de hospedar no seu servidor sem necessidade de acesso a terceiros.
+API REST para consulta de CEPs brasileiros, baseada no Diretório Nacional de Endereços (DNE) com propósito de hospedar no seu servidor sem necessidade de acesso a terceiros.
 
 Projeto open source, rápido, eficiente e fácil de usar.
 
