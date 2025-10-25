@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="40 15 110 120" fill="none">
+  <!-- Ícone -->
+  <g transform="translate(0,00)">
+    <!-- Base verde -->
+    <path transform="translate(0,10)" d="M45 90 L95 60 L145 90 L95 120 Z" fill="#009739"/>
+    <!-- Marcador amarelo -->
+    <path d="M95 25 C78 25 65 38 65 55 C65 76 95 110 95 110 C95 110 125 76 125 55 C125 38 112 25 95 25 Z M95 70 A15 15 0 1 1 95 40 A15 15 0 0 1 95 70 Z" fill="#FFCC29"/>
+  </g>
+</svg>
