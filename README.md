@@ -24,8 +24,8 @@ Projeto open source, rápido, eficiente e fácil de usar.
   - [`GET /debug/count`](#get-debugcount)
   - [`GET /debug/stats`](#get-debugstats)
 - [Configurações da API](#configurações-da-api)
+- [Benchmarks](#benchmarks)
 - [Licença](#licença)
-- [Licença](#licença-1)
 - [Contribua](#contribua)
 
 ---
@@ -273,10 +273,34 @@ Estatísticas dos CEPs por UF.
 
 ---
 
+## Benchmarks
+
+You can run `make benchmark-docker`. 
+
+We've tested using c0.5m0.5 container with ssd disk and results goes to:
+```
+checks.........................: 100.00% ✓ 29614      ✗ 0    
+data_received..................: 12 MB   403 kB/s
+data_sent......................: 2.9 MB  96 kB/s
+http_req_blocked...............: avg=50.62µs min=811ns    med=2.46µs   max=15.52ms  p(90)=3.93µs   p(95)=4.6µs   
+http_req_connecting............: avg=29.1µs  min=0s       med=0s       max=13.23ms  p(90)=0s       p(95)=0s      
+✓ http_req_duration..............: avg=726.6µs min=98.52µs  med=560.47µs max=5.69ms   p(90)=1.4ms    p(95)=1.73ms  
+{ expected_response:true }...: avg=726.6µs min=98.52µs  med=560.47µs max=5.69ms   p(90)=1.4ms    p(95)=1.73ms  
+http_req_failed................: 0.00%   ✓ 0          ✗ 29614
+http_req_receiving.............: avg=35.43µs min=8.94µs   med=20.92µs  max=2.98ms   p(90)=42.85µs  p(95)=81.16µs 
+http_req_sending...............: avg=36.16µs min=3.53µs   med=8.44µs   max=4.15ms   p(90)=76.58µs  p(95)=187.25µs
+http_req_tls_handshaking.......: avg=0s      min=0s       med=0s       max=0s       p(90)=0s       p(95)=0s      
+http_req_waiting...............: avg=655µs   min=72.32µs  med=497.57µs max=4.67ms   p(90)=1.31ms   p(95)=1.62ms  
+http_reqs......................: 29614   984.159634/s
+iteration_duration.............: avg=101.4ms min=100.16ms med=101.25ms max=117.66ms p(90)=102.32ms p(95)=102.78ms
+iterations.....................: 29614   984.159634/s
+vus............................: 100     min=100      max=100
+vus_max........................: 100     min=100      max=100
+```
+
 ## Licença
 MIT
 
-## Licença
 
 Este projeto está licenciado sob a Licença MIT - consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
 

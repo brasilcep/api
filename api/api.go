@@ -79,13 +79,13 @@ func (api *API) Listen() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.RequestID())
 
-	enableRateLimit := api.config.GetBool("api.rate_limit.enable")
+	enableRateLimit := api.config.GetBool("api.rate.limit.enable")
 
 	if enableRateLimit {
 		api.logger.Debug("Rate limiting enabled")
-		rateLimit := api.config.GetInt("api.rate_limit.max_allowed_requests_per_window")
-		rateLimit_burst := api.config.GetInt("api.rate_limit.requests_burst")
-		ratelimit_expire := api.config.GetDuration("api.rate_limit.expire_minutes")
+		rateLimit := api.config.GetInt("api.rate.limit.max_allowed_requests_per_window")
+		rateLimit_burst := api.config.GetInt("api.rate.limit.requests_burst")
+		ratelimit_expire := api.config.GetDuration("api.rate.limit.expire_minutes")
 
 		config := middleware.RateLimiterConfig{
 			Skipper: middleware.DefaultSkipper,

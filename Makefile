@@ -35,3 +35,9 @@ run-docker:
 	docker run --cpus="0.5" --memory="512m" \
 	-p 8080:8080 \
 	brasilcep/api:dev
+
+benchmark-docker:
+	docker compose up brasilcep-api -d
+	@echo "Waiting for the API to start and load data..."
+	sleep 120
+	docker compose up 

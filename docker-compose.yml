@@ -1,0 +1,27 @@
+services:
+  brasilcep-api:
+    image: brasilcep/api:latest
+    container_name: benchmark-test
+    env_file:
+      - .env.benchmark
+    ports:
+      - "8081:8080"
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+  k6:
+    image: loadimpact/k6
+    container_name: k6
+    depends_on:
+      - brasilcep-api
+    volumes:
+      - ./benchmark:/benchmark
+    entrypoint: ["sh", "-c", "sleep 10 && k6 run /benchmark/get.benchmark.js"]

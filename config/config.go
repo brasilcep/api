@@ -21,10 +21,10 @@ func NewConfig() *viper.Viper {
 
 	conf.SetDefault("api.gzip.compression.level", 5)
 
-	conf.SetDefault("api.rate_limit.enable", true)
-	conf.SetDefault("api.rate_limit.max_allowed_requests_per_window", 100)
-	conf.SetDefault("api.rate_limit.requests_burst", 20)
-	conf.SetDefault("api.rate_limit.expire_minutes", 15)
+	conf.SetDefault("api.rate.limit.enable", true)
+	conf.SetDefault("api.rate.limit.max_allowed_requests_per_window", 100)
+	conf.SetDefault("api.rate.limit.requests_burst", 20)
+	conf.SetDefault("api.rate.limit.expire_minutes", 15)
 
 	conf.SetDefault("api.cors.allow.origins", []string{"*"})
 	conf.SetDefault("api.cors.allow.methods", []string{"GET", "HEAD", "PUT", "PATCH", "POST", "DELETE"})
