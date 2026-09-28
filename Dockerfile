@@ -1,24 +1,45 @@
-FROM alpine:latest AS base
-RUN apk update && apk upgrade
+# syntax=docker/dockerfile:1
 
-FROM base AS builder 
+FROM golang:1.24-alpine AS builder
 
-RUN apk add go make git
+WORKDIR /src
 
-WORKDIR /app
+# Keep dependency downloads cached when only application sources change.
+COPY go.mod go.sum ./
+RUN go mod download
 
 COPY . .
 
-RUN make build
+ARG VERSION=dev
+ARG COMMIT=none
+ARG REPO=github.com/brasilcep/api
 
-FROM base AS final
+RUN CGO_ENABLED=0 GOOS=linux go build \
+    -trimpath \
+    -ldflags="-s -w \
+      -X 'main.Version=${VERSION}' \
+      -X 'main.Commit=${COMMIT}' \
+      -X 'main.Repo=${REPO}' \
+      -X 'main.Compiler=$(go version | awk '{print $3}')'" \
+    -o /out/wserver ./main.go
+
+FROM alpine:3.22 AS final
+
+RUN apk add --no-cache su-exec tar && \
+    addgroup -S brasilcep && \
+    adduser -S -G brasilcep -h /app brasilcep
 
 WORKDIR /app
 
-COPY --from=builder /app/data.tar.gz /app/data.tar.gz
+COPY --from=builder /out/wserver ./wserver
+COPY --chown=brasilcep:brasilcep --chmod=755 docker-entrypoint.sh ./docker-entrypoint.sh
 
-RUN tar -xzf data.tar.gz && rm -rf data.tar.gz
+ENV DB_PATH=/app/data \
+    MODE=listen
 
-COPY --from=builder /app/wserver /app/wserver
+EXPOSE 8080
 
-CMD ["./wserver"]
+HEALTHCHECK --interval=30s --timeout=5s --start-period=30s --retries=3 \
+    CMD wget -q -O /dev/null http://127.0.0.1:8080/healthcheck || exit 1
+
+ENTRYPOINT ["/app/docker-entrypoint.sh"]

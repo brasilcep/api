@@ -10,3 +10,6 @@ data/
 .idea/
 brasilcep-webservice
 wserver
+.git/
+data.tar.gz
+data-dne.tar.gz

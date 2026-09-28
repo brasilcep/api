@@ -1,0 +1,35 @@
+services:
+  go-brasilcep:
+    image: thiagozs/go-brasilcep:latest
+    environment:
+      DB_PATH: /app/data
+      DATA_DNE_EXTERNAL: ${DATA_DNE_EXTERNAL}
+    volumes:
+      - go-brasilcep-data:/app/data
+    ports:
+      - target: 8080
+        published: 8080
+        protocol: tcp
+        mode: ingress
+    networks:
+      - go-brasilcep-network
+      - proxy_net
+    deploy:
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      update_config:
+        order: stop-first
+        failure_action: rollback
+
+networks:
+  go-brasilcep-network:
+    driver: overlay
+  proxy_net:
+    external: true
+
+volumes:
+  go-brasilcep-data:
