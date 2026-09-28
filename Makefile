@@ -12,6 +12,11 @@ VERSION := $(shell \
 GO_VERSION := $(shell go version | awk '{print $$3}')
 
 REPO := github.com/brasilcep/api
+IMAGE_NAME ?= brasilcep/api
+IMAGE_TAG ?= dev
+DOCKER_IMAGE := $(IMAGE_NAME):$(IMAGE_TAG)
+
+.PHONY: build test lint docker-build docker-push docker-publish run-docker benchmark-docker
 
 build:
 	@echo "Building version $(VERSION) (commit: $(COMMIT))"
@@ -28,16 +33,26 @@ lint:
 	golangci-lint run --timeout 5m
 
 docker-build:
-	tar -czf data.tar.gz data/
-	docker build -t brasilcep/api:dev .
+	@echo "Building Docker image $(DOCKER_IMAGE)"
+	docker build \
+		--build-arg VERSION="$(VERSION)" \
+		--build-arg COMMIT="$(COMMIT)" \
+		--build-arg REPO="$(REPO)" \
+		-t "$(DOCKER_IMAGE)" .
 
-run-docker: 
+docker-push:
+	docker push "$(DOCKER_IMAGE)"
+
+docker-publish: docker-build
+	docker push "$(DOCKER_IMAGE)"
+
+run-docker:
 	docker run --cpus="0.5" --memory="512m" \
 	-p 8080:8080 \
-	brasilcep/api:dev
+	"$(DOCKER_IMAGE)"
 
 benchmark-docker:
 	docker compose up brasilcep-api -d
 	@echo "Waiting for the API to start and load data..."
 	sleep 120
-	docker compose up 
+	docker compose up

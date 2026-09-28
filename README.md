@@ -9,9 +9,10 @@ API REST para consulta de CEPs brasileiros, baseada no Diretório Nacional de En
 Projeto open source, rápido, eficiente e fácil de usar.
 
 ## Sumário
+
 - [Sumário](#sumário)
 - [Como rodar](#como-rodar)
-  - [Docker (base de CEPs pré fabricada inclusa)](#docker-base-de-ceps-pré-fabricada-inclusa)
+  - [Docker](#docker)
   - [Desenvolvimento / sem docker](#desenvolvimento--sem-docker)
 - [Configurações via ENV](#configurações-via-env)
 - [Importação da base DNE](#importação-da-base-dne)
@@ -32,36 +33,73 @@ Projeto open source, rápido, eficiente e fácil de usar.
 
 ## Como rodar
 
-### Docker (base de CEPs pré fabricada inclusa)
+### Docker
+
 ```bash
-docker run -p 8080:8080 brasilcep/api:latest
-``` 
+docker run -p 8080:8080 \
+  -e DATA_DNE_EXTERNAL="https://exemplo.com/data-dne.tar.gz" \
+  brasilcep/api:latest
+```
+
+Quando `DB_PATH` ainda não contém uma base, `DATA_DNE_EXTERNAL` pode apontar para
+um arquivo `data-dne.tar.gz`. O container baixa e extrai a base antes de iniciar.
+Sem essa variável, nenhum download ou carregamento de base é realizado.
+
+Para construir e publicar a imagem em seu próprio Docker Hub:
+
+```bash
+docker login
+make docker-publish \
+  IMAGE_NAME=seu_usuario/brasilcep \
+  IMAGE_TAG=1.0.0 \
+  VERSION=1.0.0
+```
+
+`IMAGE_NAME` define o repositório no Docker Hub, `IMAGE_TAG` define a tag da
+imagem e `VERSION` define a versão exibida pela API. Os valores padrão continuam
+sendo `brasilcep/api`, `dev` e a versão derivada do Git, respectivamente.
+
+Também é possível executar as etapas separadamente:
+
+```bash
+make docker-build IMAGE_NAME=seu_usuario/brasilcep IMAGE_TAG=1.0.0 VERSION=1.0.0
+make docker-push  IMAGE_NAME=seu_usuario/brasilcep IMAGE_TAG=1.0.0
+```
 
 ### Desenvolvimento / sem docker
 
 1. Clone o repositório:
+
      ```sh
      git clone https://github.com/brasilcep/api.git
      cd brasilcep-webservice
      ```
+
 2. Instale o Go (>=1.18).
 3. Instale as dependências:
+
      ```sh
      go mod tidy
      ```
+
 4. Execute o serviço:
+
      ```sh
      go run main.go
      ```
+
      Ou utilize o Makefile:
+
      ```sh
      make run
      ```
 
 Para compilar o binário localmente:
+
 ```sh
 make build
 ```
+
 O binário será gerado em `./wservice`.
 
 ## Configurações via ENV
@@ -87,10 +125,12 @@ Todas as configurações podem ser definidas via variáveis de ambiente:
   
 - **DB_PATH**: Caminho para os arquivos do banco BadgerDB. Padrão: `./data`
 - **DB_RAW_PATH**: Caminho para os arquivos originais do DNE. Padrão: `./dne`
+- **DATA_DNE_EXTERNAL**: URL opcional de um arquivo `data-dne.tar.gz`. Quando `DB_PATH` ainda não contém uma base, o container baixa, extrai e remove esse arquivo antes de iniciar a API. A URL não é utilizada quando a base já existe.
 
 - **LOG_FORMAT**: Formato do log ("json" ou "text"). Padrão: `json`
 - **LOG_LEVEL**: Nível de log ("debug", "info", "warn", "error"). Padrão: `info`
 Exemplo de uso:
+
 ```sh
 export API_PORT=8081
 export LOG_LEVEL=debug
@@ -99,16 +139,20 @@ export LOG_LEVEL=debug
 ## Importação da base DNE
 
 Para importar a base oficial dos Correios (DNE):
+
 1. Baixe os arquivos TXT do DNE e coloque-os na pasta definida em `DB_RAW_PATH` (por padrão, `./dne`).
 2. Execute o importador:
+
      ```go
      import "github.com/brasilcep/api/zipcodes"
      zipImporter := zipcodes.NewZipCodeImporter(logger)
      zipImporter.PopulateZipcodes("./dne")
      ```
+
      Ou execute o modo seed
 
 Arquivos necessários:
+
 - LOG_LOCALIDADE.TXT
 - LOG_BAIRRO.TXT
 - LOG_LOGRADOURO_XX.TXT (para cada UF)
@@ -124,7 +168,9 @@ O modo `seed` serve para importar a base oficial dos Correios (DNE) para o banco
 export MODE=seed
 go run main.go
 ```
+
 Ou via Makefile:
+
 ```sh
 MODE=seed make run
 ```
@@ -138,7 +184,8 @@ O importador lê todos os arquivos TXT necessários e popula o banco local. Apó
 Coloque todos os arquivos TXT do DNE na pasta definida por `DB_RAW_PATH` (por padrão, `./dne`).
 
 Exemplo:
-```
+
+```text
 ./
 ├── main.go
 ├── dne/
@@ -184,12 +231,17 @@ Após importar, rode o projeto normalmente em modo `listen` para servir a API.
 ## Endpoints da API
 
 ### `GET /cep/:cep`
+
 Consulta um CEP.
+
 - **Exemplo:**
+
     ```sh
     curl http://localhost:8080/cep/01310930
     ```
+
 - **Resposta:**
+
     ```json
     {
         "cep": "01310930",
@@ -203,17 +255,23 @@ Consulta um CEP.
         "nome_origem": "LOG_LOGRADOURO_SP.TXT"
     }
     ```
+
 - **Erros:**
-    - 404: CEP não encontrado
-    - 400: CEP não fornecido
+  - 404: CEP não encontrado
+  - 400: CEP não fornecido
 
 ### `GET /healthcheck`
+
 Verifica o status do serviço.
+
 - **Exemplo:**
+
     ```sh
     curl http://localhost:8080/healthcheck
     ```
+
 - **Resposta:**
+
     ```json
     {
         "status": "ok",
@@ -224,12 +282,17 @@ Verifica o status do serviço.
     ```
 
 ### `GET /debug/list?prefix=XXXXX`
+
 Lista até 100 CEPs, opcionalmente filtrando por prefixo.
+
 - **Exemplo:**
+
     ```sh
     curl "http://localhost:8080/debug/list?prefix=01310"
     ```
+
 - **Resposta:**
+
     ```json
     {
         "total": 100,
@@ -238,12 +301,17 @@ Lista até 100 CEPs, opcionalmente filtrando por prefixo.
     ```
 
 ### `GET /debug/count`
+
 Conta o total de CEPs cadastrados.
+
 - **Exemplo:**
+
     ```sh
     curl http://localhost:8080/debug/count
     ```
+
 - **Resposta:**
+
     ```json
     {
         "total_ceps": 123456
@@ -251,12 +319,17 @@ Conta o total de CEPs cadastrados.
     ```
 
 ### `GET /debug/stats`
+
 Estatísticas dos CEPs por UF.
+
 - **Exemplo:**
+
     ```sh
     curl http://localhost:8080/debug/stats
     ```
+
 - **Resposta:**
+
     ```json
     {
         "total_ceps": 123456,
@@ -275,10 +348,11 @@ Estatísticas dos CEPs por UF.
 
 ## Benchmarks
 
-You can run `make benchmark-docker`. 
+You can run `make benchmark-docker`.
 
 We've tested using c0.5m0.5 container with ssd disk and results goes to:
-```
+
+```text
 checks.........................: 100.00% ✓ 29614      ✗ 0    
 data_received..................: 12 MB   403 kB/s
 data_sent......................: 2.9 MB  96 kB/s
@@ -299,12 +373,13 @@ vus_max........................: 100     min=100      max=100
 ```
 
 ## Licença
-MIT
 
+MIT
 
 Este projeto está licenciado sob a Licença MIT - consulte o arquivo [LICENSE](LICENSE) para mais detalhes.
 
 **Resumo da Licença:**
+
 - Uso comercial permitido
 - Modificação permitida
 - Distribuição permitida
@@ -312,6 +387,6 @@ Este projeto está licenciado sob a Licença MIT - consulte o arquivo [LICENSE](
 - Sem garantia
 - Exige atribuição do autor
 
-
 ## Contribua
+
 Pull requests são bem-vindos! Abra issues para sugestões ou problemas.
